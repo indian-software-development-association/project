@@ -5,138 +5,167 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Offline Recovery Studio</title>
 <style>
-    body { margin: 0; background: #111; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
+    body { margin: 0; background: #111; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
     
+    /* Full Screen Initial Warning */
+    #disclaimer-screen { position: fixed; inset: 0; background: #0a0000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; overflow-y: auto; text-align: left; }
+    .disclaimer-box { background: #1a0505; border: 2px solid #ff4d4d; border-radius: 10px; max-width: 800px; padding: 30px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.3); }
+    .disclaimer-box h1 { color: #ff4d4d; margin-top: 0; text-align: center; font-size: 2em; text-transform: uppercase; }
+    .disclaimer-text { color: #ddd; font-size: 0.95em; line-height: 1.6; margin-bottom: 20px; text-align: justify; }
+    .law-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; font-size: 0.85em; }
+    .law-item { background: #2a0a0a; padding: 10px; border-left: 3px solid #ff4d4d; }
+    #accept-btn { background: #ff4d4d; color: white; border: none; padding: 15px 30px; font-size: 1.2em; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; transition: background 0.3s; }
+    #accept-btn:hover { background: #cc0000; }
+
+    /* Floating Warning Box */
+    .floating-warning { position: fixed; bottom: 20px; right: 20px; width: 340px; background: rgba(20, 0, 0, 0.85); border: 1px solid #ff4d4d; color: #ffcccc; padding: 15px; font-size: 0.8em; line-height: 1.4; border-radius: 8px; box-shadow: 0 4px 15px rgba(255, 0, 0, 0.2); z-index: 999; backdrop-filter: blur(5px); }
+
     /* Lock Screen & Steps */
-    #lock { position: fixed; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #111; z-index: 10; text-align: center; padding: 20px; }
+    #lock { position: fixed; inset: 0; display: none; flex-direction: column; justify-content: center; align-items: center; background: #111; z-index: 10; text-align: center; padding: 20px; }
     .step-container { display: none; max-width: 350px; width: 100%; }
     .step-container.active { display: block; }
     .step-indicator { font-size: 0.9em; color: #888; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; }
-    
-    /* Floating Warning Box */
-    .floating-warning {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        width: 320px;
-        background: rgba(20, 0, 0, 0.9);
-        border: 1px solid #ff4d4d;
-        color: #ffcccc;
-        padding: 15px;
-        font-size: 0.85em;
-        line-height: 1.4;
-        border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(255, 0, 0, 0.2);
-        z-index: 9999;
-        pointer-events: none; /* So it doesn't block clicks */
-    }
 
     /* Main App */
-    #app { display: none; padding: 20px; flex: 1; max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+    #app { display: none; padding: 20px; flex: 1; max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box; padding-bottom: 150px; }
     .card { background: #1e1e1e; padding: 15px; border-radius: 10px; margin: 15px 0; border: 2px dashed transparent; transition: all 0.3s ease; }
     .card.dragover { border: 2px dashed #4CAF50; background: #2a2a2a; }
     
-    video { width: 100%; max-height: 60vh; background: #000; margin-top: 10px; border-radius: 5px; }
-    input[type="text"], input[type="password"], select { padding: 10px; margin: 5px 0; background: #333; color: #fff; border: 1px solid #555; border-radius: 5px; width: 100%; box-sizing: border-box; }
+    video { width: 100%; max-height: 60vh; background: #000; margin-top: 10px; border-radius: 5px; display: none; }
+    #preview-msg { color: #888; font-style: italic; margin-top: 10px; display: none; text-align: center; padding: 20px; border: 1px solid #333; border-radius: 5px; background: #111; }
+
+    input[type="text"], input[type="password"], select { padding: 12px; margin: 5px 0; background: #333; color: #fff; border: 1px solid #555; border-radius: 5px; width: 100%; box-sizing: border-box; font-size: 1em; }
     input[type="file"] { margin: 10px 0; width: 100%; }
     
-    button { padding: 10px 20px; background: #4CAF50; color: white; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; width: 100%; box-sizing: border-box; margin-top: 10px; }
+    button { padding: 12px 20px; background: #4CAF50; color: white; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; width: 100%; box-sizing: border-box; margin-top: 10px; font-size: 1em; }
     button:hover { background: #45a049; }
     
+    .touch-btn { background: #2196F3; padding: 15px; font-size: 1.1em; margin-bottom: 10px; }
+    .touch-btn:hover { background: #1976D2; }
+    
     .credits { color: #888; font-size: 0.9em; margin-top: 25px; font-weight: bold; }
-    h3 { margin-top: 0; font-size: 1.1em; color: #ddd; }
-    .help-text { font-size: 0.8em; color: #888; margin-bottom: 10px; }
+    h3 { margin-top: 0; font-size: 1.1em; color: #ddd; border-bottom: 1px solid #333; padding-bottom: 10px; }
+    .help-text { font-size: 0.85em; color: #888; margin-bottom: 10px; line-height: 1.4; }
     .hint { font-size: 0.75em; color: #666; margin-top: 5px; text-align: left; }
 </style>
 </head>
 <body>
 
+<div id="disclaimer-screen">
+    <div class="disclaimer-box">
+        <h1>Strict Legal Warning</h1>
+        <div class="disclaimer-text">
+            <strong>WARNING: RESTRICTED SYSTEM.</strong> You are accessing a highly restricted offline recovery environment. This system is strictly for authorized digital forensics and legitimate recovery operations. Unauthorized access, tampering, viewing, or extraction of electronic records from this studio constitutes a severe criminal offense under the Bharatiya Nyaya Sanhita (BNS), 2023, alongside the Information Technology Act, 2000. 
+            By proceeding, you acknowledge that all interactions are subject to strict monitoring. Ignorance of the law is not an excuse. Any attempt to bypass security, misappropriate data, or utilize this software without official prior permission from Vishal K and team will result in immediate legal prosecution, leading to hefty fines and non-bailable imprisonment. Do not proceed unless explicitly authorized.
+        </div>
+        <div class="law-grid">
+            <div class="law-item"><strong>Sec 302 BNS:</strong> Snatching/Theft of digital assets. Penalty: Up to 3 years.</div>
+            <div class="law-item"><strong>Sec 308 BNS:</strong> Extortion via data theft. Penalty: Up to 7 years.</div>
+            <div class="law-item"><strong>Sec 316 BNS:</strong> Criminal breach of trust. Penalty: Up to 5 years.</div>
+            <div class="law-item"><strong>Sec 318 BNS:</strong> Cheating and fraud. Penalty: Up to 3 years.</div>
+            <div class="law-item"><strong>Sec 319 BNS:</strong> Cheating by personation. Penalty: Up to 5 years.</div>
+            <div class="law-item"><strong>Sec 324 BNS:</strong> Mischief causing damage. Penalty: Up to 6 months.</div>
+            <div class="law-item"><strong>Sec 335 BNS:</strong> Making false electronic records. Penalty: Varies.</div>
+            <div class="law-item"><strong>Sec 336 BNS:</strong> Forgery. Penalty: Up to 2 years.</div>
+            <div class="law-item"><strong>Sec 338 BNS:</strong> Forgery of public register/records. Penalty: Up to 7 years.</div>
+            <div class="law-item"><strong>Sec 340 BNS:</strong> Using forged record as genuine. Penalty: Same as forgery.</div>
+            <div class="law-item"><strong>Sec 343 BNS:</strong> Falsification of accounts. Penalty: Up to 7 years.</div>
+            <div class="law-item"><strong>Sec 61 BNS:</strong> Criminal Conspiracy. Penalty: Same as abetted offense.</div>
+        </div>
+        <button id="accept-btn" onclick="acceptDisclaimer()">I UNDERSTAND & ACCEPT</button>
+    </div>
+</div>
+
 <div class="floating-warning">
-    <strong>WARNING:</strong> Unauthorized access to this system is strictly prohibited. Violators will face immediate prosecution under the Information Technology Act, 2000 (India). Applicable statutes include: Section 43 (Damage to computer systems), Section 66 (Computer-related offenses), Section 66C (Identity theft), Section 66D (Cheating by personation), and Section 65 (Tampering with source documents).<br><br>
-    <strong>TERMS AND CONDITIONS:</strong> By using this Offline Recovery Studio, you agree that all activities are logged and strictly for authorized forensic recovery only.
+    <strong>WARNING:</strong> Unauthorized access is strictly prohibited. Violators face prosecution under the IT Act & BNS. Applicable laws: Sec 302 BNS (Theft), Sec 318 BNS (Cheating), Sec 324 BNS (Mischief), Sec 336 BNS (Forgery), Sec 338 BNS (Forgery of Records).<br><br>
+    <strong>TERMS:</strong> By using this Studio, you agree that all activities are strictly for authorized forensic recovery. Licensed to Vishal K & team.
 </div>
 
 <div id="lock">
     <h1>Offline Recovery Studio</h1>
-    
     <div id="step1" class="step-container active">
         <div class="step-indicator">Authentication: Step 1 of 4</div>
         <input id="pw1" type="password" placeholder="Enter Primary Key">
         <button onclick="verifyStep1()">Proceed</button>
     </div>
-
     <div id="step2" class="step-container">
         <div class="step-indicator">Authentication: Step 2 of 4</div>
         <input id="pw2" type="password" placeholder="Enter Secondary Key">
         <button onclick="verifyStep2()">Proceed</button>
     </div>
-
     <div id="step3" class="step-container">
         <div class="step-indicator">Authentication: Step 3 of 4</div>
         <input id="pw3" type="password" placeholder="Enter 11-Character String">
         <button onclick="verifyStep3()">Proceed</button>
     </div>
-
     <div id="step4" class="step-container">
         <div class="step-indicator">Authentication: Step 4 of 4</div>
         <input id="pw4" type="text" placeholder="YYYYMMDDHH:MM(count)">
         <div class="hint" id="count-hint">Current Access Instance: Loading...</div>
         <button onclick="verifyStep4()">Unlock Studio</button>
     </div>
-    
     <div class="credits">Developed by Vishal K and team</div>
 </div>
 
 <div id="app">
+    
     <div class="card" id="drop-zone">
-        <h3>1. Single File Input</h3>
-        <div class="help-text">Click below, drag & drop a file here, or press Ctrl+V / Cmd+V to paste a file.</div>
+        <h3>1. Smart Touch / Direct Input</h3>
+        <div class="help-text">For Smart TVs without keyboards: Copy your file, then tap the button below to paste it directly into the studio. Supports ALL file formats (.txt, .pdf, .mp4, etc).</div>
+        <button class="touch-btn" onclick="handleTouchPaste()">📋 Paste File From Clipboard</button>
+        <div class="help-text" style="margin-top: 15px;">Or use standard file selection/drag-and-drop:</div>
         <input type="file" id="file">
     </div>
 
     <div class="card">
-        <h3>2. Scan Folder / File Address</h3>
-        <div class="help-text">Select a folder to scan its contents, then choose a specific file from the list.</div>
+        <h3>2. Local File Hierarchy Scanner</h3>
+        <div class="help-text">Select a folder to load its internal hierarchy. You can extract and recover any specific file from within the directory.</div>
         <input type="file" id="folder-input" webkitdirectory directory multiple>
-        <select id="file-list">
-            <option value="">-- No folder selected --</option>
+        <select id="file-list" style="margin-top: 10px;">
+            <option value="">-- No directory loaded --</option>
         </select>
     </div>
 
     <div class="card">
-        <p id="info" style="color: #aaa; margin: 0 0 5px 0;">No file selected</p>
-        <p id="result" style="color: #4CAF50; font-weight: bold; margin: 0 0 10px 0;">Ready</p>
+        <h3>Recovery Preview</h3>
+        <p id="info" style="color: #aaa; margin: 0 0 5px 0;">No file loaded</p>
+        <p id="result" style="color: #4CAF50; font-weight: bold; margin: 0 0 10px 0;">System Ready</p>
+        
         <video id="player" controls></video>
+        <div id="preview-msg">Preview is not available for this file type. The file is ready for recovery/saving below.</div>
     </div>
 
     <div class="card">
-        <input type="text" id="newname" placeholder="recovered-video.mp4">
+        <h3>Export Recovered File</h3>
+        <input type="text" id="newname" placeholder="recovered-file.ext">
         <button id="save">Save Copy</button>
     </div>
 </div>
 
 <script>
+// --- Initial Disclaimer Logic ---
+function acceptDisclaimer() {
+    document.getElementById('disclaimer-screen').style.display = 'none';
+    document.getElementById('lock').style.display = 'flex';
+}
+
 // --- Cookie / Access Counter Management ---
 function getAccessCount() {
-    // Try cookie first
     let match = document.cookie.match(new RegExp('(^| )accessCount=([^;]+)'));
     if (match) return parseInt(match[2]);
-    // Fallback to localStorage if running on file:/// where cookies are blocked
     let localCount = localStorage.getItem('accessCount');
     if (localCount) return parseInt(localCount);
-    return 1; // Default
+    return 1; 
 }
 
 function incrementAccessCount() {
     let current = getAccessCount();
     let next = current + 1;
-    document.cookie = "accessCount=" + next + ";path=/;max-age=31536000"; // 1 Year expiry
-    localStorage.setItem('accessCount', next); // Fallback backup
+    document.cookie = "accessCount=" + next + ";path=/;max-age=31536000"; 
+    localStorage.setItem('accessCount', next); 
 }
 
-// Display the instance count hint for Step 4
 document.getElementById('count-hint').innerText = "Current Access Instance: " + getAccessCount();
-
 
 // --- 4-Step Authentication Logic ---
 function switchStep(hideId, showId) {
@@ -161,14 +190,11 @@ function verifyStep3() {
 
 function getChennaiTime() {
     let now = new Date();
-    // Enforce Chennai time and 24-hour (railway) format
     let options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
     let formatter = new Intl.DateTimeFormat('en-GB', options);
     let parts = formatter.formatToParts(now);
-    
     let p = {};
     parts.forEach(part => p[part.type] = part.value);
-    
     return `${p.year}${p.month}${p.day}${p.hour}:${p.minute}`;
 }
 
@@ -179,16 +205,15 @@ function verifyStep4() {
     let expectedFullString = `${expectedTime}(${currentCount})`;
 
     if(val === expectedFullString) {
-        incrementAccessCount(); // Register the successful login
+        incrementAccessCount(); 
         document.getElementById('lock').style.display = 'none';
         document.getElementById('app').style.display = 'block';
     } else {
-        alert("Access Denied. Time/Count synchronization failed.\nHint: Are you using exactly " + expectedTime + " with count (" + currentCount + ")?");
+        alert("Access Denied. Sync failed.\nHint format: " + expectedTime + "(" + currentCount + ")");
     }
 }
 
-
-// --- Core Processing Logic ---
+// --- Universal Core Processing Logic ---
 let currentFile = null;
 
 async function processFile(targetFile) {
@@ -201,20 +226,62 @@ async function processFile(targetFile) {
         const buf = await currentFile.slice(0, 64).arrayBuffer();
         const b = new Uint8Array(buf);
 
-        let ext = 'mp4';
-        let type = 'Unknown';
+        // Extract original extension as a fallback for ANY file type
+        let originalName = currentFile.name;
+        let originalExt = originalName.includes('.') ? originalName.split('.').pop().toLowerCase() : 'bin';
 
-        if(String.fromCharCode(...b.slice(4,8)) === 'ftyp') { type = 'MP4/MOV'; ext = 'mp4'; }
-        else if(String.fromCharCode(...b.slice(0,4)) === 'RIFF') { type = 'AVI'; ext = 'avi'; }
-        else if(String.fromCharCode(...b.slice(0,3)) === 'FLV') { type = 'FLV'; ext = 'flv'; }
-        else if(String.fromCharCode(...b.slice(0,4)) === 'OggS') { type = 'OGG'; ext = 'ogg'; }
-        else if(b[0]===0x1A && b[1]===0x45 && b[2]===0xDF && b[3]===0xA3) { type = 'MKV'; ext = 'mkv'; }
+        let ext = originalExt;
+        let type = 'Generic Document (' + originalExt.toUpperCase() + ')';
+        let isMedia = false;
 
-        document.getElementById('result').textContent = 'Detected: ' + type + ' | Suggested: .' + ext;
-        document.getElementById('newname').value = 'recovered-video.' + ext;
-        document.getElementById('player').src = URL.createObjectURL(currentFile);
+        // Check magic numbers for common media/documents first
+        if(String.fromCharCode(...b.slice(4,8)) === 'ftyp') { type = 'MP4/MOV'; ext = 'mp4'; isMedia = true; }
+        else if(String.fromCharCode(...b.slice(0,4)) === 'RIFF') { type = 'AVI'; ext = 'avi'; isMedia = true; }
+        else if(String.fromCharCode(...b.slice(0,3)) === 'FLV') { type = 'FLV'; ext = 'flv'; isMedia = true; }
+        else if(String.fromCharCode(...b.slice(0,4)) === 'OggS') { type = 'OGG'; ext = 'ogg'; isMedia = true; }
+        else if(b[0]===0x1A && b[1]===0x45 && b[2]===0xDF && b[3]===0xA3) { type = 'MKV'; ext = 'mkv'; isMedia = true; }
+        else if(String.fromCharCode(...b.slice(0,4)) === '%PDF') { type = 'PDF Document'; ext = 'pdf'; }
+        
+        document.getElementById('result').textContent = 'Detected: ' + type + ' | Suggested Save: .' + ext;
+        document.getElementById('newname').value = 'recovered-file.' + ext;
+
+        const player = document.getElementById('player');
+        const previewMsg = document.getElementById('preview-msg');
+
+        // Handle UI Preview rendering based on file type
+        if(isMedia) {
+            player.style.display = 'block';
+            previewMsg.style.display = 'none';
+            player.src = URL.createObjectURL(currentFile);
+        } else {
+            player.style.display = 'none';
+            previewMsg.style.display = 'block';
+            previewMsg.textContent = 'Preview is not available for .' + ext.toUpperCase() + ' files. The file is ready for recovery/saving below.';
+        }
     } catch (e) {
-        document.getElementById('result').textContent = 'Error: Cannot read file headers.';
+        document.getElementById('result').textContent = 'Error: Cannot read file headers. File may be corrupted.';
+    }
+}
+
+// --- Smart TV Touch Paste Logic (Universal) ---
+async function handleTouchPaste() {
+    try {
+        const clipboardItems = await navigator.clipboard.read();
+        for (const clipboardItem of clipboardItems) {
+            // Check all types in clipboard to allow .txt, .pdf, images, and videos
+            for (const type of clipboardItem.types) {
+                if (type !== 'text/plain') { // Prefer actual files over standard copied text
+                    const blob = await clipboardItem.getType(type);
+                    const fileExt = type.split('/')[1] || 'bin';
+                    const file = new File([blob], "pasted_touch_file." + fileExt, { type: type });
+                    processFile(file);
+                    return;
+                }
+            }
+        }
+        alert("No valid file found in clipboard. Please copy a file first.");
+    } catch (err) {
+        alert("Clipboard Access Error: Make sure you have granted clipboard permissions and are running this via HTTPS/Localhost.");
     }
 }
 
@@ -235,15 +302,16 @@ window.addEventListener('paste', e => {
     if(e.clipboardData.files.length > 0) processFile(e.clipboardData.files[0]);
 });
 
+// Hierarchy Scanner Handlers
 let folderFiles = [];
 document.getElementById('folder-input').onchange = e => {
     folderFiles = Array.from(e.target.files);
     const select = document.getElementById('file-list');
-    select.innerHTML = '<option value="">-- Select a file (' + folderFiles.length + ' found) --</option>';
+    select.innerHTML = '<option value="">-- Select a file (' + folderFiles.length + ' found in hierarchy) --</option>';
     folderFiles.forEach((f, index) => {
         const opt = document.createElement('option');
         opt.value = index;
-        opt.textContent = f.webkitRelativePath || f.name; 
+        opt.textContent = "📁 " + (f.webkitRelativePath || f.name); 
         select.appendChild(opt);
     });
 };
@@ -255,7 +323,7 @@ document.getElementById('file-list').onchange = e => {
 // --- Save Functionality ---
 document.getElementById('save').onclick = () => {
     if(!currentFile) return;
-    const name = document.getElementById('newname').value.trim() || 'recovered-video.mp4';
+    const name = document.getElementById('newname').value.trim() || 'recovered-file.bin';
     const f = new File([currentFile], name, { type: currentFile.type || 'application/octet-stream' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(f);
