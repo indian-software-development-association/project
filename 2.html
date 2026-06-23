@@ -1,92 +1,270 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Offline Recovery Studio</title>
 <style>
-body{margin:0;background:#111;color:#fff;font-family:Arial}
-#lock{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#111}
-#app{display:none;padding:20px}
-.card{background:#1e1e1e;padding:15px;border-radius:10px;margin:10px 0}
-video{width:100%;max-height:60vh;background:#000}
-input,button{padding:10px}
+    body { margin: 0; background: #111; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
+    
+    /* Lock Screen & Steps */
+    #lock { position: fixed; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #111; z-index: 10; text-align: center; padding: 20px; }
+    .step-container { display: none; max-width: 350px; width: 100%; }
+    .step-container.active { display: block; }
+    .step-indicator { font-size: 0.9em; color: #888; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; }
+    
+    /* Floating Warning Box */
+    .floating-warning {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 320px;
+        background: rgba(20, 0, 0, 0.9);
+        border: 1px solid #ff4d4d;
+        color: #ffcccc;
+        padding: 15px;
+        font-size: 0.85em;
+        line-height: 1.4;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(255, 0, 0, 0.2);
+        z-index: 9999;
+        pointer-events: none; /* So it doesn't block clicks */
+    }
+
+    /* Main App */
+    #app { display: none; padding: 20px; flex: 1; max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+    .card { background: #1e1e1e; padding: 15px; border-radius: 10px; margin: 15px 0; border: 2px dashed transparent; transition: all 0.3s ease; }
+    .card.dragover { border: 2px dashed #4CAF50; background: #2a2a2a; }
+    
+    video { width: 100%; max-height: 60vh; background: #000; margin-top: 10px; border-radius: 5px; }
+    input[type="text"], input[type="password"], select { padding: 10px; margin: 5px 0; background: #333; color: #fff; border: 1px solid #555; border-radius: 5px; width: 100%; box-sizing: border-box; }
+    input[type="file"] { margin: 10px 0; width: 100%; }
+    
+    button { padding: 10px 20px; background: #4CAF50; color: white; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; width: 100%; box-sizing: border-box; margin-top: 10px; }
+    button:hover { background: #45a049; }
+    
+    .credits { color: #888; font-size: 0.9em; margin-top: 25px; font-weight: bold; }
+    h3 { margin-top: 0; font-size: 1.1em; color: #ddd; }
+    .help-text { font-size: 0.8em; color: #888; margin-bottom: 10px; }
+    .hint { font-size: 0.75em; color: #666; margin-top: 5px; text-align: left; }
 </style>
 </head>
 <body>
+
+<div class="floating-warning">
+    <strong>WARNING:</strong> Unauthorized access to this system is strictly prohibited. Violators will face immediate prosecution under the Information Technology Act, 2000 (India). Applicable statutes include: Section 43 (Damage to computer systems), Section 66 (Computer-related offenses), Section 66C (Identity theft), Section 66D (Cheating by personation), and Section 65 (Tampering with source documents).<br><br>
+    <strong>TERMS AND CONDITIONS:</strong> By using this Offline Recovery Studio, you agree that all activities are logged and strictly for authorized forensic recovery only.
+</div>
+
 <div id="lock">
-<h1>Offline Recovery Studio</h1>
-<input id="pw" type="password" placeholder="Password">
-<button onclick="unlock()">Unlock</button>
+    <h1>Offline Recovery Studio</h1>
+    
+    <div id="step1" class="step-container active">
+        <div class="step-indicator">Authentication: Step 1 of 4</div>
+        <input id="pw1" type="password" placeholder="Enter Primary Key">
+        <button onclick="verifyStep1()">Proceed</button>
+    </div>
+
+    <div id="step2" class="step-container">
+        <div class="step-indicator">Authentication: Step 2 of 4</div>
+        <input id="pw2" type="password" placeholder="Enter Secondary Key">
+        <button onclick="verifyStep2()">Proceed</button>
+    </div>
+
+    <div id="step3" class="step-container">
+        <div class="step-indicator">Authentication: Step 3 of 4</div>
+        <input id="pw3" type="password" placeholder="Enter 11-Character String">
+        <button onclick="verifyStep3()">Proceed</button>
+    </div>
+
+    <div id="step4" class="step-container">
+        <div class="step-indicator">Authentication: Step 4 of 4</div>
+        <input id="pw4" type="text" placeholder="YYYYMMDDHH:MM(count)">
+        <div class="hint" id="count-hint">Current Access Instance: Loading...</div>
+        <button onclick="verifyStep4()">Unlock Studio</button>
+    </div>
+    
+    <div class="credits">Developed by Vishal K and team</div>
 </div>
 
 <div id="app">
-<div class="card">
-<input type="file" id="file">
-<p id="info">No file selected</p>
-<p id="result">Ready</p>
-</div>
+    <div class="card" id="drop-zone">
+        <h3>1. Single File Input</h3>
+        <div class="help-text">Click below, drag & drop a file here, or press Ctrl+V / Cmd+V to paste a file.</div>
+        <input type="file" id="file">
+    </div>
 
-<div class="card">
-<video id="player" controls></video>
-</div>
+    <div class="card">
+        <h3>2. Scan Folder / File Address</h3>
+        <div class="help-text">Select a folder to scan its contents, then choose a specific file from the list.</div>
+        <input type="file" id="folder-input" webkitdirectory directory multiple>
+        <select id="file-list">
+            <option value="">-- No folder selected --</option>
+        </select>
+    </div>
 
-<div class="card">
-<input id="newname" placeholder="recovered-video.mp4">
-<button id="save">Save Copy</button>
-</div>
+    <div class="card">
+        <p id="info" style="color: #aaa; margin: 0 0 5px 0;">No file selected</p>
+        <p id="result" style="color: #4CAF50; font-weight: bold; margin: 0 0 10px 0;">Ready</p>
+        <video id="player" controls></video>
+    </div>
+
+    <div class="card">
+        <input type="text" id="newname" placeholder="recovered-video.mp4">
+        <button id="save">Save Copy</button>
+    </div>
 </div>
 
 <script>
-function unlock(){
- if(document.getElementById('pw').value==='HPK'){
-   document.getElementById('lock').style.display='none';
-   document.getElementById('app').style.display='block';
- }
+// --- Cookie / Access Counter Management ---
+function getAccessCount() {
+    // Try cookie first
+    let match = document.cookie.match(new RegExp('(^| )accessCount=([^;]+)'));
+    if (match) return parseInt(match[2]);
+    // Fallback to localStorage if running on file:/// where cookies are blocked
+    let localCount = localStorage.getItem('accessCount');
+    if (localCount) return parseInt(localCount);
+    return 1; // Default
 }
 
-let currentFile=null;
+function incrementAccessCount() {
+    let current = getAccessCount();
+    let next = current + 1;
+    document.cookie = "accessCount=" + next + ";path=/;max-age=31536000"; // 1 Year expiry
+    localStorage.setItem('accessCount', next); // Fallback backup
+}
 
-document.getElementById('file').onchange=async e=>{
- currentFile=e.target.files[0];
- if(!currentFile) return;
+// Display the instance count hint for Step 4
+document.getElementById('count-hint').innerText = "Current Access Instance: " + getAccessCount();
 
- document.getElementById('info').innerHTML =
-  currentFile.name + " | " +
-  (currentFile.size/1024/1024).toFixed(2) + " MB";
 
- const buf = await currentFile.slice(0,64).arrayBuffer();
- const b = new Uint8Array(buf);
+// --- 4-Step Authentication Logic ---
+function switchStep(hideId, showId) {
+    document.getElementById(hideId).classList.remove('active');
+    document.getElementById(showId).classList.add('active');
+}
 
- let ext='mp4';
- let type='Unknown';
+function verifyStep1() {
+    if(document.getElementById('pw1').value === 'vishal1454') switchStep('step1', 'step2');
+    else alert("Access Denied: Incorrect Primary Key");
+}
 
- if(String.fromCharCode(...b.slice(4,8))==='ftyp'){type='MP4/MOV';ext='mp4';}
- else if(String.fromCharCode(...b.slice(0,4))==='RIFF'){type='AVI';ext='avi';}
- else if(String.fromCharCode(...b.slice(0,3))==='FLV'){type='FLV';ext='flv';}
- else if(String.fromCharCode(...b.slice(0,4))==='OggS'){type='OGG';ext='ogg';}
+function verifyStep2() {
+    if(document.getElementById('pw2').value === 'HPK') switchStep('step2', 'step3');
+    else alert("Access Denied: Incorrect Secondary Key");
+}
 
- document.getElementById('result').textContent =
-  'Detected: '+type+' | Suggested: .'+ext;
+function verifyStep3() {
+    if(document.getElementById('pw3').value.length === 11) switchStep('step3', 'step4');
+    else alert("Access Denied: String must be exactly 11 characters");
+}
 
- document.getElementById('newname').value =
-  'recovered-video.'+ext;
+function getChennaiTime() {
+    let now = new Date();
+    // Enforce Chennai time and 24-hour (railway) format
+    let options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
+    let formatter = new Intl.DateTimeFormat('en-GB', options);
+    let parts = formatter.formatToParts(now);
+    
+    let p = {};
+    parts.forEach(part => p[part.type] = part.value);
+    
+    return `${p.year}${p.month}${p.day}${p.hour}:${p.minute}`;
+}
 
- document.getElementById('player').src =
-  URL.createObjectURL(currentFile);
+function verifyStep4() {
+    let val = document.getElementById('pw4').value;
+    let expectedTime = getChennaiTime();
+    let currentCount = getAccessCount();
+    let expectedFullString = `${expectedTime}(${currentCount})`;
+
+    if(val === expectedFullString) {
+        incrementAccessCount(); // Register the successful login
+        document.getElementById('lock').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+    } else {
+        alert("Access Denied. Time/Count synchronization failed.\nHint: Are you using exactly " + expectedTime + " with count (" + currentCount + ")?");
+    }
+}
+
+
+// --- Core Processing Logic ---
+let currentFile = null;
+
+async function processFile(targetFile) {
+    if(!targetFile) return;
+    currentFile = targetFile;
+
+    document.getElementById('info').innerHTML = currentFile.name + " | " + (currentFile.size / 1024 / 1024).toFixed(2) + " MB";
+
+    try {
+        const buf = await currentFile.slice(0, 64).arrayBuffer();
+        const b = new Uint8Array(buf);
+
+        let ext = 'mp4';
+        let type = 'Unknown';
+
+        if(String.fromCharCode(...b.slice(4,8)) === 'ftyp') { type = 'MP4/MOV'; ext = 'mp4'; }
+        else if(String.fromCharCode(...b.slice(0,4)) === 'RIFF') { type = 'AVI'; ext = 'avi'; }
+        else if(String.fromCharCode(...b.slice(0,3)) === 'FLV') { type = 'FLV'; ext = 'flv'; }
+        else if(String.fromCharCode(...b.slice(0,4)) === 'OggS') { type = 'OGG'; ext = 'ogg'; }
+        else if(b[0]===0x1A && b[1]===0x45 && b[2]===0xDF && b[3]===0xA3) { type = 'MKV'; ext = 'mkv'; }
+
+        document.getElementById('result').textContent = 'Detected: ' + type + ' | Suggested: .' + ext;
+        document.getElementById('newname').value = 'recovered-video.' + ext;
+        document.getElementById('player').src = URL.createObjectURL(currentFile);
+    } catch (e) {
+        document.getElementById('result').textContent = 'Error: Cannot read file headers.';
+    }
+}
+
+// --- Input Handlers ---
+document.getElementById('file').onchange = e => processFile(e.target.files[0]);
+
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', e => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if(e.dataTransfer.files.length > 0) processFile(e.dataTransfer.files[0]);
+});
+
+window.addEventListener('paste', e => {
+    if(document.getElementById('app').style.display !== 'block') return; 
+    if(e.clipboardData.files.length > 0) processFile(e.clipboardData.files[0]);
+});
+
+let folderFiles = [];
+document.getElementById('folder-input').onchange = e => {
+    folderFiles = Array.from(e.target.files);
+    const select = document.getElementById('file-list');
+    select.innerHTML = '<option value="">-- Select a file (' + folderFiles.length + ' found) --</option>';
+    folderFiles.forEach((f, index) => {
+        const opt = document.createElement('option');
+        opt.value = index;
+        opt.textContent = f.webkitRelativePath || f.name; 
+        select.appendChild(opt);
+    });
 };
 
-document.getElementById('save').onclick=()=>{
- if(!currentFile) return;
+document.getElementById('file-list').onchange = e => {
+    if(e.target.value !== "") processFile(folderFiles[e.target.value]);
+};
 
- const name=document.getElementById('newname').value.trim();
- const f=new File([currentFile],name,{type:currentFile.type});
-
- const a=document.createElement('a');
- a.href=URL.createObjectURL(f);
- a.download=name;
- a.click();
+// --- Save Functionality ---
+document.getElementById('save').onclick = () => {
+    if(!currentFile) return;
+    const name = document.getElementById('newname').value.trim() || 'recovered-video.mp4';
+    const f = new File([currentFile], name, { type: currentFile.type || 'application/octet-stream' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(f);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
 };
 </script>
 </body>
-</html> by Vishal K
+</html>
